@@ -7,6 +7,7 @@ object DefaultLocationHolder {
     private const val PREF_NAME = "weather_preferences"
     private const val KEY_DEFAULT_LOCATION = "default_location"
 
+
     private lateinit var sharedPreferences: SharedPreferences
 
     fun initialize(context: Context) {

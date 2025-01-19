@@ -32,7 +32,6 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import android.location.LocationManager
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,9 +42,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,13 +68,23 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    // Get devices last known location
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+
     private lateinit var viewModel: WeatherViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("MainActivity", "onCreate called")
+
+        // Initialize viewModel and fusedLocationClient
         viewModel = ViewModelProvider(this)[WeatherViewModel::class.java]
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        // Check for location permissions
+        checkLocationPermissions()
+
+        // Set the content view using Jetpack compose
         setContent {
             WeatherApplicationTheme {
                 val navController = rememberNavController()
@@ -85,7 +92,6 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController, startDestination = "weather", modifier = Modifier.padding(innerPadding)) {
                         composable("weather") {
                             WeatherScreen(
-                                mainActivity = this@MainActivity,
                                 viewModel = viewModel,
                                 navController = navController
                             )
@@ -103,11 +109,48 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun getLastLocation(onGpsNotEnabled: () -> Unit) {
+    private fun checkLocationPermissions() {
         if (ActivityCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
                 this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // Request location permissions if not granted
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 1)
+        }
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        Log.d("MainActivity", "onResume called")
+        // Fetch the latest weather data when the app comes to the foreground
+        viewModel.fetchWeatherData(viewModel.currentLocationName.value)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        Log.d("MainActivity", "onPause called")
+        // Save the current state or perform cleanup operations
+        val sharedPreferences = getSharedPreferences("WeatherAppPrefs", MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putString("currentLocation", viewModel.currentLocationName.value)
+        editor.apply()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("MainActivity", "onDestroy called")
+        // Clear the permissions state
+        val sharedPreferences = getSharedPreferences("WeatherAppPrefs", MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.remove("locationPermissionGranted")
+        editor.apply()
+    }
+
+    // Function to get last devices location
+    fun getLastLocation(onGpsNotEnabled: () -> Unit, onLocationRetrieved: (Boolean) -> Unit) {
+        if (ActivityCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 1)
             return
         }
@@ -122,33 +165,55 @@ class MainActivity : ComponentActivity() {
                     val lon = location.longitude
                     Log.d("MainActivity", "User's location: lat=$lat, lon=$lon")
                     viewModel.fetchWeatherData(lat, lon)
+                    onLocationRetrieved(true)
+                } else {
+                    onLocationRetrieved(false)
                 }
             }
         } else {
             onGpsNotEnabled()
+            onLocationRetrieved(false)
         }
     }
+
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1) {
             if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                getLastLocation{}
+                // If permissions are granted, get the last known location
+                getLastLocation(
+                    onGpsNotEnabled = {
+                        // Handle the case where GPS is not enabled
+                        Log.d("MainActivity", "GPS is not enabled")
+                    },
+                    onLocationRetrieved = { isLocationRetrieved ->
+                        if (isLocationRetrieved) {
+                            Log.d("MainActivity", "Location retrieved successfully")
+                        } else {
+                            Log.d("MainActivity", "Failed to retrieve location")
+                        }
+                    }
+                )
             } else {
+                // Handle the case where permissions are not granted
+                Log.d("MainActivity", "Location permissions not granted")
             }
             return
         }
     }
+
 }
 
 @Composable
-fun WeatherScreen(mainActivity: MainActivity, viewModel: WeatherViewModel, navController: NavController, modifier: Modifier = Modifier) {
+fun WeatherScreen(
+    viewModel: WeatherViewModel,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
     val weatherData = viewModel.weatherData.observeAsState().value
     val forecastData = viewModel.forecastData.observeAsState().value
     val currentLocationName = viewModel.currentLocationName.collectAsState().value
-    var showSnackbar by remember { mutableStateOf(false) }
-    var snackbarMessage by remember { mutableStateOf("") }
-    var showGpsReminder by remember { mutableStateOf(false) }
 
     if (weatherData != null && forecastData != null) {
         Box(
@@ -293,19 +358,6 @@ fun WeatherScreen(mainActivity: MainActivity, viewModel: WeatherViewModel, navCo
             }
         }
 
-        GpsReminderSnackbar(showGpsReminder, onDismiss = { showGpsReminder = false })
-
-        if (showSnackbar) {
-            Snackbar(
-                action = {
-                    TextButton(onClick = { showSnackbar = false }) {
-                        Text(text = "Dismiss")
-                    }
-                }
-            ) {
-                Text(text = snackbarMessage)
-            }
-        }
     }
 }
 
@@ -394,12 +446,16 @@ fun SettingsScreen(mainActivity: MainActivity, viewModel: WeatherViewModel, navC
             // Get Current Location
             Button(
                 onClick = {
-                    mainActivity.getLastLocation {
-                        showGpsReminder = true
-                    }
-                    if (viewModel.currentLocationName.value != "Location not found") {
-                        navController.navigate("weather")
-                    }
+                    mainActivity.getLastLocation(
+                        onGpsNotEnabled = {
+                            showGpsReminder = true
+                        },
+                        onLocationRetrieved = { isLocationRetrieved ->
+                            if (isLocationRetrieved) {
+                                navController.navigate("weather")
+                            }
+                        }
+                    )
                 },
                 modifier = Modifier.padding(8.dp)
             ) {
@@ -441,7 +497,6 @@ fun SettingsScreen(mainActivity: MainActivity, viewModel: WeatherViewModel, navC
                     Text(text = "Set as Default")
                 }
             }
-
             GpsReminderSnackbar(showGpsReminder, onDismiss = { showGpsReminder = false })
 
             if (showSnackbar) {
@@ -458,6 +513,8 @@ fun SettingsScreen(mainActivity: MainActivity, viewModel: WeatherViewModel, navC
         }
     }
 }
+
+
 
 @Composable
 fun GpsReminderSnackbar(showGpsReminder: Boolean, onDismiss: () -> Unit) {
@@ -490,7 +547,6 @@ private fun formatTime(time: Long): String {
 fun WeatherScreenPreview() {
     WeatherApplicationTheme {
         val navController = rememberNavController()
-        WeatherScreen(mainActivity = MainActivity(), viewModel = WeatherViewModel(), navController = navController)
+        WeatherScreen(viewModel = WeatherViewModel(), navController = navController)
     }
 }
-

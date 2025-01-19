@@ -11,9 +11,7 @@ composeBom = "2024.04.01"
 runtimeLivedata = "1.7.3"
 retrofit = "2.9.0"
 datastoreCoreAndroid = "1.1.1"
-roomCommon = "2.6.1"
-roomCommonJvm = "2.7.0-alpha09"
-roomKtx = "2.6.1"
+room = "2.6.1"
 playServicesLocation = "21.3.0"
 storage = "1.5.0"
 
@@ -35,9 +33,9 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 androidx-datastore-core-android = { group = "androidx.datastore", name = "datastore-core-android", version.ref = "datastoreCoreAndroid" }
-androidx-room-common = { group = "androidx.room", name = "room-common", version.ref = "roomCommon" }
-androidx-room-common-jvm = { group = "androidx.room", name = "room-common-jvm", version.ref = "roomCommonJvm" }
-androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 androidx-storage = { group = "androidx.test.services", name = "storage", version.ref = "storage" }
 
@@ -45,4 +43,3 @@ androidx-storage = { group = "androidx.test.services", name = "storage", version
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-

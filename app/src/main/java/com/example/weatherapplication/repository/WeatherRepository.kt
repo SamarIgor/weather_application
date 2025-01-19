@@ -14,6 +14,7 @@ class WeatherRepository {
         }
     }
 
+
     suspend fun getForecast(location: String): Forecast {
         return withContext(Dispatchers.IO) {
             RetrofitInstance.api.getForecast(location, "ea358312c6cd052d15579728afe3a41e")
@@ -23,7 +24,7 @@ class WeatherRepository {
     suspend fun getCurrentWeather(lat: Double, lon: Double): Weather {
         return withContext(Dispatchers.IO) {
             val weather = RetrofitInstance.api.getCurrentWeather(lat, lon, "ea358312c6cd052d15579728afe3a41e")
-            Log.d("WeatherRepository", "Fetched weather data: $weather")
+            Log.d("WeatherRepository", "Fetched weather data: \$weather")
             weather
         }
     }
@@ -31,9 +32,8 @@ class WeatherRepository {
     suspend fun getForecast(lat: Double, lon: Double): Forecast {
         return withContext(Dispatchers.IO) {
             val forecast = RetrofitInstance.api.getForecast(lat, lon, "ea358312c6cd052d15579728afe3a41e")
-            Log.d("WeatherRepository", "Fetched forecast data: $forecast")
+            Log.d("WeatherRepository", "Fetched forecast data: \$forecast")
             forecast
         }
     }
-
 }

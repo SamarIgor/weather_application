@@ -16,14 +16,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-
 class WeatherViewModel : ViewModel() {
+
 
     private val _currentLocationName = MutableStateFlow<String>("")
     val currentLocationName: StateFlow<String> = _currentLocationName.asStateFlow()
 
     private val _defaultLocation = MutableStateFlow<String>("Ljubljana")
-    val defaultLocation: StateFlow<String> = _defaultLocation.asStateFlow()
 
     private val repository = WeatherRepository()
     private val _weatherData = MutableLiveData<Weather>()

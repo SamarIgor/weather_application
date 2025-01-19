@@ -8,3 +8,4 @@ class WeatherApplication : Application() {
         DefaultLocationHolder.initialize(this)
     }
 }
+
